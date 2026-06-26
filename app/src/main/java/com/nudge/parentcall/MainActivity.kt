@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
@@ -14,9 +15,11 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.nudge.parentcall.Prefs.afterHour
 import com.nudge.parentcall.Prefs.armed
+import com.nudge.parentcall.Prefs.grandViaWhatsApp
 import com.nudge.parentcall.Prefs.grandparentNumber
 import com.nudge.parentcall.Prefs.nextTarget
 import com.nudge.parentcall.Prefs.parentNumber
+import com.nudge.parentcall.Prefs.parentViaWhatsApp
 
 class MainActivity : AppCompatActivity() {
 
@@ -27,11 +30,15 @@ class MainActivity : AppCompatActivity() {
         val parent = findViewById<EditText>(R.id.parentNum)
         val grand = findViewById<EditText>(R.id.grandNum)
         val hour = findViewById<EditText>(R.id.hour)
+        val parentWA = findViewById<CheckBox>(R.id.parentWA)
+        val grandWA = findViewById<CheckBox>(R.id.grandWA)
         val status = findViewById<TextView>(R.id.status)
 
         parent.setText(parentNumber)
         grand.setText(grandparentNumber)
         hour.setText(afterHour.toString())
+        parentWA.isChecked = parentViaWhatsApp
+        grandWA.isChecked = grandViaWhatsApp
 
         requestPermissions()
 
@@ -39,6 +46,8 @@ class MainActivity : AppCompatActivity() {
             parentNumber = parent.text.toString().trim()
             grandparentNumber = grand.text.toString().trim()
             afterHour = hour.text.toString().toIntOrNull()?.coerceIn(0, 23) ?: 19
+            parentViaWhatsApp = parentWA.isChecked
+            grandViaWhatsApp = grandWA.isChecked
 
             if (parentNumber.isBlank()) {
                 Toast.makeText(this, "Enter at least Parent's number.", Toast.LENGTH_SHORT).show()
@@ -96,7 +105,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun requestPermissions() {
-        val perms = mutableListOf(Manifest.permission.CALL_PHONE)
+        val perms = mutableListOf(
+            Manifest.permission.CALL_PHONE,
+            Manifest.permission.READ_CONTACTS
+        )
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             perms.add(Manifest.permission.POST_NOTIFICATIONS)
         }

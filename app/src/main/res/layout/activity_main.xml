@@ -20,12 +20,24 @@
         android:hint="Parent's phone number"
         android:inputType="phone" />
 
+    <CheckBox
+        android:id="@+id/parentWA"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Call Parent via WhatsApp" />
+
     <EditText
         android:id="@+id/grandNum"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Grandparent's phone number"
         android:inputType="phone" />
+
+    <CheckBox
+        android:id="@+id/grandWA"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Call Grandparent via WhatsApp" />
 
     <EditText
         android:id="@+id/hour"

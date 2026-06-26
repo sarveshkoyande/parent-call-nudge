@@ -17,6 +17,15 @@ object Prefs {
         get() = p(this).getString("grand", "") ?: ""
         set(v) { p(this).edit().putString("grand", v).apply() }
 
+    /** If true, call this person over WhatsApp instead of a normal cellular call. */
+    var Context.parentViaWhatsApp: Boolean
+        get() = p(this).getBoolean("parentWA", false)
+        set(v) { p(this).edit().putBoolean("parentWA", v).apply() }
+
+    var Context.grandViaWhatsApp: Boolean
+        get() = p(this).getBoolean("grandWA", false)
+        set(v) { p(this).edit().putBoolean("grandWA", v).apply() }
+
     /** Hour of day (0-23) after which nudging starts, e.g. 18 = 6pm. */
     var Context.afterHour: Int
         get() = p(this).getInt("afterHour", 19)   // 19 = 7pm, office ends
