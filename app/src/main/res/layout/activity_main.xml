@@ -1,68 +1,67 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="24dp">
+    android:layout_height="match_parent">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="After-work family call nudge"
-        android:textSize="22sp"
-        android:textStyle="bold"
-        android:paddingBottom="16dp" />
-
-    <EditText
-        android:id="@+id/parentNum"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Parent's phone number"
-        android:inputType="phone" />
+        android:orientation="vertical"
+        android:padding="24dp">
 
-    <CheckBox
-        android:id="@+id/parentWA"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Call Parent via WhatsApp" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="After-work family call nudge"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:paddingBottom="8dp" />
 
-    <EditText
-        android:id="@+id/grandNum"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Grandparent's phone number"
-        android:inputType="phone" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="People to call, in order:"
+            android:paddingBottom="8dp" />
 
-    <CheckBox
-        android:id="@+id/grandWA"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Call Grandparent via WhatsApp" />
+        <!-- Contact rows get added here at runtime -->
+        <LinearLayout
+            android:id="@+id/contactsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
 
-    <EditText
-        android:id="@+id/hour"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Start after this hour (0-23, e.g. 19 for 7pm)"
-        android:inputType="number" />
+        <Button
+            android:id="@+id/addContact"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="+ Add from contacts" />
 
-    <Button
-        android:id="@+id/arm"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="Arm it" />
+        <EditText
+            android:id="@+id/hour"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:hint="Start after this hour (0-23, e.g. 19 for 7pm)"
+            android:inputType="number" />
 
-    <Button
-        android:id="@+id/disarm"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Disarm" />
+        <Button
+            android:id="@+id/arm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Arm it" />
 
-    <TextView
-        android:id="@+id/status"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:textSize="16sp" />
-</LinearLayout>
+        <Button
+            android:id="@+id/disarm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Disarm" />
+
+        <TextView
+            android:id="@+id/status"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:textSize="16sp" />
+    </LinearLayout>
+</ScrollView>

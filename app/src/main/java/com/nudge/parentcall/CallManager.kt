@@ -8,17 +8,14 @@ import android.net.Uri
 import android.provider.ContactsContract
 import android.widget.Toast
 import androidx.core.content.ContextCompat
-import com.nudge.parentcall.Prefs.completedDay
-import com.nudge.parentcall.Prefs.grandViaWhatsApp
-import com.nudge.parentcall.Prefs.grandparentNumber
-import com.nudge.parentcall.Prefs.nextTarget
-import com.nudge.parentcall.Prefs.parentNumber
-import com.nudge.parentcall.Prefs.parentViaWhatsApp
+import com.nudge.parentcall.Prefs.ensureToday
+import com.nudge.parentcall.Prefs.loadTargets
+import com.nudge.parentcall.Prefs.nextIndex
 
 /**
- * Places the outgoing call directly — no prompt, no countdown, no skip button.
- * Each target can be a normal cellular call OR a WhatsApp voice call.
- * Advances the chain: parent -> grand -> done-for-today.
+ * Places the next call directly — no prompt, no countdown, no skip button.
+ * Walks an ordered list of contacts; each can be a normal cellular call OR a
+ * WhatsApp voice call. The user's only way out is the phone's "end call" button.
  */
 object CallManager {
 
@@ -27,34 +24,19 @@ object CallManager {
     private const val WA_PKG = "com.whatsapp"
 
     fun dialNext(ctx: Context) {
-        val target = ctx.nextTarget
-        val number = when (target) {
-            "parent" -> ctx.parentNumber
-            "grand"  -> ctx.grandparentNumber
-            else     -> return
-        }
-        if (number.isBlank()) {
-            // No grandparent set? then parent alone finishes the day.
-            if (target == "grand") ctx.completedDay = Prefs.todayStamp()
-            return
-        }
+        ctx.ensureToday()                 // reset to first contact on a new day
+        val targets = ctx.loadTargets()
+        if (targets.isEmpty()) return
 
-        val viaWhatsApp = if (target == "parent") ctx.parentViaWhatsApp else ctx.grandViaWhatsApp
+        val idx = ctx.nextIndex
+        if (idx >= targets.size) return   // everyone called today — done
 
-        val placed = if (viaWhatsApp) whatsAppCall(ctx, number) else cellularCall(ctx, number)
+        val t = targets[idx]
+        val placed = if (t.viaWhatsApp) whatsAppCall(ctx, t.number) else cellularCall(ctx, t.number)
 
-        // Only advance the chain if we actually placed the call. If a WhatsApp
-        // call couldn't be set up, we leave the target as-is so it retries
-        // (after the user fixes the contact) instead of silently skipping.
-        if (!placed) return
-
-        when (target) {
-            "parent" -> ctx.nextTarget = "grand"
-            "grand"  -> {
-                ctx.nextTarget = "done"
-                ctx.completedDay = Prefs.todayStamp()
-            }
-        }
+        // Only advance if the call actually went out. If a WhatsApp call couldn't
+        // be set up, we leave the index so it retries (after the contact is fixed).
+        if (placed) ctx.nextIndex = idx + 1
     }
 
     private fun cellularCall(ctx: Context, number: String): Boolean {
@@ -89,7 +71,7 @@ object CallManager {
         if (dataId == null) {
             Toast.makeText(
                 ctx,
-                "Save $number as a contact with WhatsApp, then it can call via WhatsApp.",
+                "Save $number as a contact with WhatsApp to call via WhatsApp.",
                 Toast.LENGTH_LONG
             ).show()
             return false
@@ -113,7 +95,6 @@ object CallManager {
     private fun findWhatsAppCallRow(ctx: Context, number: String): Long? {
         val cr = ctx.contentResolver
 
-        // 1) number -> contact id
         val lookup = Uri.withAppendedPath(
             ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(number)
         )
@@ -122,7 +103,6 @@ object CallManager {
             ?.use { if (it.moveToFirst()) contactId = it.getLong(0) }
         if (contactId < 0) return null
 
-        // 2) contact id -> WhatsApp voice-call data row id
         var dataId: Long? = null
         cr.query(
             ContactsContract.Data.CONTENT_URI,

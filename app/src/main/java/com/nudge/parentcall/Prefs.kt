@@ -1,6 +1,8 @@
 package com.nudge.parentcall
 
 import android.content.Context
+import org.json.JSONArray
+import org.json.JSONObject
 import java.util.Calendar
 
 /** Single place for all saved state. Backed by SharedPreferences. */
@@ -9,45 +11,47 @@ object Prefs {
 
     private fun p(ctx: Context) = ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
-    var Context.parentNumber: String
-        get() = p(this).getString("parent", "") ?: ""
-        set(v) { p(this).edit().putString("parent", v).apply() }
-
-    var Context.grandparentNumber: String
-        get() = p(this).getString("grand", "") ?: ""
-        set(v) { p(this).edit().putString("grand", v).apply() }
-
-    /** If true, call this person over WhatsApp instead of a normal cellular call. */
-    var Context.parentViaWhatsApp: Boolean
-        get() = p(this).getBoolean("parentWA", false)
-        set(v) { p(this).edit().putBoolean("parentWA", v).apply() }
-
-    var Context.grandViaWhatsApp: Boolean
-        get() = p(this).getBoolean("grandWA", false)
-        set(v) { p(this).edit().putBoolean("grandWA", v).apply() }
-
-    /** Hour of day (0-23) after which nudging starts, e.g. 18 = 6pm. */
+    /** Hour of day (0-23) after which nudging starts, e.g. 19 = 7pm. */
     var Context.afterHour: Int
-        get() = p(this).getInt("afterHour", 19)   // 19 = 7pm, office ends
+        get() = p(this).getInt("afterHour", 19)
         set(v) { p(this).edit().putInt("afterHour", v).apply() }
 
     var Context.armed: Boolean
         get() = p(this).getBoolean("armed", false)
         set(v) { p(this).edit().putBoolean("armed", v).apply() }
 
-    /** "parent" or "grand" — who the next nudge should call. */
-    var Context.nextTarget: String
-        get() = p(this).getString("nextTarget", "parent") ?: "parent"
-        set(v) { p(this).edit().putString("nextTarget", v).apply() }
+    /** Index of the next person to call in the ordered list. */
+    var Context.nextIndex: Int
+        get() = p(this).getInt("nextIndex", 0)
+        set(v) { p(this).edit().putInt("nextIndex", v).apply() }
 
-    var Context.streak: Int
-        get() = p(this).getInt("streak", 0)
-        set(v) { p(this).edit().putInt("streak", v).apply() }
+    /** The day [nextIndex] belongs to, so progress resets each new day. */
+    var Context.progressDay: Int
+        get() = p(this).getInt("progressDay", -1)
+        set(v) { p(this).edit().putInt("progressDay", v).apply() }
 
-    /** Day-of-year stamp of the last day both calls were completed. */
-    var Context.completedDay: Int
-        get() = p(this).getInt("completedDay", -1)
-        set(v) { p(this).edit().putInt("completedDay", v).apply() }
+    // ---- the ordered contact list, stored as JSON ----
+
+    fun Context.loadTargets(): MutableList<CallTarget> {
+        val raw = p(this).getString("targets", "[]") ?: "[]"
+        val arr = JSONArray(raw)
+        val list = mutableListOf<CallTarget>()
+        for (i in 0 until arr.length()) {
+            val o = arr.getJSONObject(i)
+            list.add(CallTarget(o.optString("name"), o.optString("number"), o.optBoolean("wa")))
+        }
+        return list
+    }
+
+    fun Context.saveTargets(list: List<CallTarget>) {
+        val arr = JSONArray()
+        list.forEach {
+            arr.put(JSONObject().put("name", it.name).put("number", it.number).put("wa", it.viaWhatsApp))
+        }
+        p(this).edit().putString("targets", arr.toString()).apply()
+    }
+
+    // ---- time / day helpers ----
 
     fun Context.isAfterHours(): Boolean {
         val now = Calendar.getInstance()
@@ -59,12 +63,11 @@ object Prefs {
         return c.get(Calendar.YEAR) * 1000 + c.get(Calendar.DAY_OF_YEAR)
     }
 
-    fun Context.isDoneToday(): Boolean = completedDay == todayStamp()
-
-    /** Reset the day's progress so a new day starts at Parent again. */
-    fun Context.rolloverIfNewDay() {
-        if (completedDay != todayStamp() && nextTarget == "done") {
-            nextTarget = "parent"
+    /** On a new day, start the list over from the first contact. */
+    fun Context.ensureToday() {
+        if (progressDay != todayStamp()) {
+            nextIndex = 0
+            progressDay = todayStamp()
         }
     }
 }

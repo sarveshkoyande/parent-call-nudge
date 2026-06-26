@@ -5,57 +5,71 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.ContactsContract
 import android.provider.Settings
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import com.nudge.parentcall.Prefs.afterHour
 import com.nudge.parentcall.Prefs.armed
-import com.nudge.parentcall.Prefs.grandViaWhatsApp
-import com.nudge.parentcall.Prefs.grandparentNumber
-import com.nudge.parentcall.Prefs.nextTarget
-import com.nudge.parentcall.Prefs.parentNumber
-import com.nudge.parentcall.Prefs.parentViaWhatsApp
+import com.nudge.parentcall.Prefs.loadTargets
+import com.nudge.parentcall.Prefs.saveTargets
 
 class MainActivity : AppCompatActivity() {
+
+    private val targets = mutableListOf<CallTarget>()
+    private lateinit var container: LinearLayout
+    private lateinit var status: TextView
+
+    // Launches the system contact picker and reads the chosen phone number.
+    private val pickContact =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { res ->
+            if (res.resultCode == RESULT_OK) {
+                res.data?.data?.let { uri ->
+                    readPickedContact(uri)?.let {
+                        targets.add(it)
+                        saveTargets(targets)
+                        renderRows()
+                    }
+                }
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val parent = findViewById<EditText>(R.id.parentNum)
-        val grand = findViewById<EditText>(R.id.grandNum)
+        container = findViewById(R.id.contactsContainer)
+        status = findViewById(R.id.status)
         val hour = findViewById<EditText>(R.id.hour)
-        val parentWA = findViewById<CheckBox>(R.id.parentWA)
-        val grandWA = findViewById<CheckBox>(R.id.grandWA)
-        val status = findViewById<TextView>(R.id.status)
 
-        parent.setText(parentNumber)
-        grand.setText(grandparentNumber)
+        targets.clear()
+        targets.addAll(loadTargets())
         hour.setText(afterHour.toString())
-        parentWA.isChecked = parentViaWhatsApp
-        grandWA.isChecked = grandViaWhatsApp
+        renderRows()
 
         requestPermissions()
 
-        findViewById<Button>(R.id.arm).setOnClickListener {
-            parentNumber = parent.text.toString().trim()
-            grandparentNumber = grand.text.toString().trim()
-            afterHour = hour.text.toString().toIntOrNull()?.coerceIn(0, 23) ?: 19
-            parentViaWhatsApp = parentWA.isChecked
-            grandViaWhatsApp = grandWA.isChecked
+        findViewById<Button>(R.id.addContact).setOnClickListener {
+            pickContact.launch(
+                Intent(Intent.ACTION_PICK, ContactsContract.CommonDataKinds.Phone.CONTENT_URI)
+            )
+        }
 
-            if (parentNumber.isBlank()) {
-                Toast.makeText(this, "Enter at least Parent's number.", Toast.LENGTH_SHORT).show()
+        findViewById<Button>(R.id.arm).setOnClickListener {
+            afterHour = hour.text.toString().toIntOrNull()?.coerceIn(0, 23) ?: 19
+            saveTargets(targets)
+
+            if (targets.isEmpty()) {
+                Toast.makeText(this, "Add at least one contact.", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-
-            // Background auto-dial needs the "Display over other apps" right.
-            // Send the user to grant it, then they tap Arm again.
             if (!canDrawOverlays()) {
                 Toast.makeText(this,
                     "Grant \"Display over other apps\", then tap Arm again.",
@@ -65,9 +79,8 @@ class MainActivity : AppCompatActivity() {
             }
 
             armed = true
-            nextTarget = "parent"
             startNudgeService()
-            status.text = "ARMED ✓  After ${afterHour}:00, your next unlock auto-dials Parent, then Grandparent."
+            updateStatus()
         }
 
         findViewById<Button>(R.id.disarm).setOnClickListener {
@@ -76,11 +89,58 @@ class MainActivity : AppCompatActivity() {
             status.text = "Disarmed."
         }
 
+        updateStatus()
+    }
+
+    /** Rebuild the contact rows from [targets]. */
+    private fun renderRows() {
+        container.removeAllViews()
+        targets.forEachIndexed { i, t ->
+            val row = layoutInflater.inflate(R.layout.contact_row, container, false)
+            row.findViewById<TextView>(R.id.rowName).text = "${i + 1}. ${t.name}"
+            row.findViewById<TextView>(R.id.rowNumber).text = t.number
+
+            val wa = row.findViewById<CheckBox>(R.id.rowWA)
+            wa.isChecked = t.viaWhatsApp
+            wa.setOnCheckedChangeListener { _, checked ->
+                targets[i] = t.copy(viaWhatsApp = checked)
+                saveTargets(targets)
+            }
+
+            row.findViewById<Button>(R.id.rowRemove).setOnClickListener {
+                targets.removeAt(i)
+                saveTargets(targets)
+                renderRows()
+            }
+            container.addView(row)
+        }
+    }
+
+    /** Read name + number from a picked Phone contact uri. */
+    private fun readPickedContact(uri: Uri): CallTarget? {
+        contentResolver.query(
+            uri,
+            arrayOf(
+                ContactsContract.CommonDataKinds.Phone.NUMBER,
+                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME
+            ),
+            null, null, null
+        )?.use {
+            if (it.moveToFirst()) {
+                val number = it.getString(0)?.replace(" ", "") ?: return null
+                val name = it.getString(1) ?: number
+                return CallTarget(name, number, false)
+            }
+        }
+        return null
+    }
+
+    private fun updateStatus() {
         status.text = when {
             armed && !canDrawOverlays() ->
                 "⚠ Armed, but \"Display over other apps\" is OFF — auto-dial may not fire. Re-arm to fix."
-            armed -> "ARMED ✓  Auto-dials after ${afterHour}:00."
-            else  -> "Not armed."
+            armed -> "ARMED ✓  After ${afterHour}:00, your next unlock calls them in order."
+            else -> "Not armed."
         }
     }
 
@@ -90,10 +150,7 @@ class MainActivity : AppCompatActivity() {
     private fun requestOverlayPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             startActivity(
-                Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:$packageName")
-                )
+                Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:$packageName"))
             )
         }
     }
