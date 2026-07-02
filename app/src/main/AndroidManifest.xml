@@ -16,6 +16,13 @@
     <!-- Grants the app the right to launch the call from the background (after unlock). -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
+    <!-- Voice alarm feature -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -34,6 +41,26 @@
 
         <activity
             android:name=".CallNudgeActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".AlarmActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".AlarmEditActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".AlarmRingActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleInstance"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true" />
+
+        <receiver
+            android:name=".AlarmReceiver"
             android:exported="false" />
 
         <service

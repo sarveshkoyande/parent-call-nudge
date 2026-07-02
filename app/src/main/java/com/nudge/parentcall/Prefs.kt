@@ -72,6 +72,57 @@ object Prefs {
         return (arr.length() - 1 downTo 0).map { arr.getString(it) }
     }
 
+    // ---- voice alarms, stored as JSON ----
+
+    fun Context.loadAlarms(): MutableList<Alarm> {
+        val raw = p(this).getString("alarms", "[]") ?: "[]"
+        val arr = JSONArray(raw)
+        val list = mutableListOf<Alarm>()
+        for (i in 0 until arr.length()) {
+            val o = arr.getJSONObject(i)
+            val daysArr = o.optJSONArray("days") ?: JSONArray()
+            val days = (0 until daysArr.length()).map { daysArr.getInt(it) }
+            list.add(
+                Alarm(
+                    id = o.getInt("id"),
+                    hour = o.getInt("hour"),
+                    minute = o.getInt("minute"),
+                    label = o.optString("label"),
+                    days = days,
+                    audioPath = o.optString("audio"),
+                    enabled = o.optBoolean("enabled", true)
+                )
+            )
+        }
+        return list
+    }
+
+    fun Context.saveAlarms(list: List<Alarm>) {
+        val arr = JSONArray()
+        list.forEach { a ->
+            val days = JSONArray()
+            a.days.forEach { days.put(it) }
+            arr.put(
+                JSONObject()
+                    .put("id", a.id)
+                    .put("hour", a.hour)
+                    .put("minute", a.minute)
+                    .put("label", a.label)
+                    .put("days", days)
+                    .put("audio", a.audioPath)
+                    .put("enabled", a.enabled)
+            )
+        }
+        p(this).edit().putString("alarms", arr.toString()).apply()
+    }
+
+    /** A new unique alarm id. */
+    fun Context.nextAlarmId(): Int {
+        val id = p(this).getInt("alarmSeq", 1)
+        p(this).edit().putInt("alarmSeq", id + 1).apply()
+        return id
+    }
+
     // ---- time helper ----
 
     fun Context.isAfterHours(): Boolean {

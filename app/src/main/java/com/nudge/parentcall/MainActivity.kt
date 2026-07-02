@@ -2,7 +2,6 @@ package com.nudge.parentcall
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.card.MaterialCardView
 
@@ -16,7 +15,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, CallNudgeActivity::class.java))
         }
         findViewById<MaterialCardView>(R.id.cardAlarm).setOnClickListener {
-            Toast.makeText(this, "Voice Alarms arrive in the next update 🎙️", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, AlarmActivity::class.java))
         }
     }
 }

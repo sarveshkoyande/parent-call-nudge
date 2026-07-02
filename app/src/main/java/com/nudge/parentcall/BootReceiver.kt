@@ -10,6 +10,10 @@ import com.nudge.parentcall.Prefs.armed
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
+
+        // Exact alarms are cleared on reboot — re-arm them.
+        AlarmScheduler.scheduleAll(context)
+
         if (!context.armed) return
         val svc = Intent(context, ForegroundService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
