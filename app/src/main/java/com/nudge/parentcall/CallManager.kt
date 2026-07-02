@@ -8,35 +8,58 @@ import android.net.Uri
 import android.provider.ContactsContract
 import android.widget.Toast
 import androidx.core.content.ContextCompat
-import com.nudge.parentcall.Prefs.ensureToday
+import com.nudge.parentcall.Prefs.logCall
 import com.nudge.parentcall.Prefs.loadTargets
-import com.nudge.parentcall.Prefs.nextIndex
+import com.nudge.parentcall.Prefs.saveTargets
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 /**
- * Places the next call directly — no prompt, no countdown, no skip button.
- * Walks an ordered list of contacts; each can be a normal cellular call OR a
- * WhatsApp voice call. The user's only way out is the phone's "end call" button.
+ * Places the next *due* call directly — no prompt, no countdown, no skip button.
+ * Each contact has its own frequency (daily / every N weeks on Sunday), tracked
+ * by the day it was last called. The user's only way out is the "end call" button.
  */
 object CallManager {
 
-    // WhatsApp's hidden "voice call this contact" action.
     private const val WA_VOIP = "vnd.android.cursor.item/vnd.com.whatsapp.voip.call"
     private const val WA_PKG = "com.whatsapp"
+    private val stamp = DateTimeFormatter.ofPattern("MMM d, HH:mm")
 
     fun dialNext(ctx: Context) {
-        ctx.ensureToday()                 // reset to first contact on a new day
         val targets = ctx.loadTargets()
         if (targets.isEmpty()) return
 
-        val idx = ctx.nextIndex
-        if (idx >= targets.size) return   // everyone called today — done
+        val today = LocalDate.now()
+        val todayEpoch = today.toEpochDay()
+        val isSunday = today.dayOfWeek == DayOfWeek.SUNDAY
+
+        // First person in list order who is due right now.
+        val idx = targets.indexOfFirst { isDue(it, todayEpoch, isSunday) }
+        if (idx < 0) return
 
         val t = targets[idx]
         val placed = if (t.viaWhatsApp) whatsAppCall(ctx, t.number) else cellularCall(ctx, t.number)
+        if (!placed) return
 
-        // Only advance if the call actually went out. If a WhatsApp call couldn't
-        // be set up, we leave the index so it retries (after the contact is fixed).
-        if (placed) ctx.nextIndex = idx + 1
+        // Mark called today and log it.
+        targets[idx] = t.copy(lastCalledEpochDay = todayEpoch)
+        ctx.saveTargets(targets)
+        val how = if (t.viaWhatsApp) "WhatsApp" else "Call"
+        ctx.logCall("${LocalDateTime.now().format(stamp)} — ${t.name} ($how)")
+    }
+
+    /** Is this contact due to be called today? */
+    private fun isDue(t: CallTarget, todayEpoch: Long, isSunday: Boolean): Boolean {
+        if (t.lastCalledEpochDay == todayEpoch) return false   // already called today
+        return if (t.frequencyWeeks <= 0) {
+            true                                                // daily, not yet today
+        } else {
+            if (!isSunday) return false                         // weekly ones only on Sunday
+            if (t.lastCalledEpochDay < 0L) true                 // first time -> this Sunday
+            else (todayEpoch - t.lastCalledEpochDay) >= t.frequencyWeeks * 7L
+        }
     }
 
     private fun cellularCall(ctx: Context, number: String): Boolean {
@@ -53,11 +76,6 @@ object CallManager {
         return true
     }
 
-    /**
-     * Starts a WhatsApp voice call. Needs READ_CONTACTS, and the number must be
-     * saved as a contact that has WhatsApp. We look up that contact's hidden
-     * WhatsApp "voice call" data row and fire it.
-     */
     private fun whatsAppCall(ctx: Context, number: String): Boolean {
         if (ContextCompat.checkSelfPermission(ctx, Manifest.permission.READ_CONTACTS)
             != PackageManager.PERMISSION_GRANTED
@@ -70,8 +88,7 @@ object CallManager {
         val dataId = findWhatsAppCallRow(ctx, number)
         if (dataId == null) {
             Toast.makeText(
-                ctx,
-                "Save $number as a contact with WhatsApp to call via WhatsApp.",
+                ctx, "Save $number as a contact with WhatsApp to call via WhatsApp.",
                 Toast.LENGTH_LONG
             ).show()
             return false
@@ -91,10 +108,8 @@ object CallManager {
         }
     }
 
-    /** Find the contact for [number], then its WhatsApp voice-call data row id. */
     private fun findWhatsAppCallRow(ctx: Context, number: String): Long? {
         val cr = ctx.contentResolver
-
         val lookup = Uri.withAppendedPath(
             ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(number)
         )

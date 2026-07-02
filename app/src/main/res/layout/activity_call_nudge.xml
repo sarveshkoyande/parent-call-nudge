@@ -7,23 +7,23 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:padding="20dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="After-work family call nudge"
-            android:textSize="22sp"
+            android:text="After-work Call Nudge"
+            android:textColor="@color/purple"
+            android:textSize="24sp"
             android:textStyle="bold"
-            android:paddingBottom="8dp" />
+            android:paddingBottom="4dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="People to call, in order:"
-            android:paddingBottom="8dp" />
+            android:paddingBottom="10dp" />
 
-        <!-- Contact rows get added here at runtime -->
         <LinearLayout
             android:id="@+id/contactsContainer"
             android:layout_width="match_parent"
@@ -32,16 +32,22 @@
 
         <Button
             android:id="@+id/addContact"
+            style="?attr/materialButtonOutlinedStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="+ Add from contacts" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Start calling after this hour (0–23):" />
 
         <EditText
             android:id="@+id/hour"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:hint="Start after this hour (0-23, e.g. 19 for 7pm)"
+            android:hint="e.g. 19 for 7pm"
             android:inputType="number" />
 
         <Button
@@ -53,6 +59,7 @@
 
         <Button
             android:id="@+id/disarm"
+            style="?attr/materialButtonOutlinedStyle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Disarm" />
@@ -61,7 +68,23 @@
             android:id="@+id/status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:textSize="15sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:textSize="16sp" />
+            android:text="Recent calls"
+            android:textColor="@color/green_dark"
+            android:textSize="17sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/recentList"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="6dp"
+            android:textSize="13sp" />
     </LinearLayout>
 </ScrollView>

@@ -18,8 +18,10 @@
 
     <application
         android:allowBackup="true"
-        android:label="Parent Call Nudge"
-        android:theme="@style/Theme.Material3.DayNight">
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="Stay Close"
+        android:theme="@style/Theme.ParentCallNudge">
 
         <activity
             android:name=".MainActivity"
@@ -29,6 +31,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".CallNudgeActivity"
+            android:exported="false" />
 
         <service
             android:name=".ForegroundService"

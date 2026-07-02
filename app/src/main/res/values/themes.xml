@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.ParentCallNudge" parent="Theme.Material3.DayNight">
+        <item name="colorPrimary">@color/purple</item>
+        <item name="colorOnPrimary">@color/white</item>
+        <item name="colorPrimaryContainer">@color/purple_light</item>
+        <item name="colorOnPrimaryContainer">@color/purple_dark</item>
+        <item name="colorSecondary">@color/green</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <item name="colorSecondaryContainer">@color/green_light</item>
+        <item name="colorOnSecondaryContainer">@color/green_dark</item>
+        <item name="colorTertiary">@color/green</item>
+    </style>
+</resources>

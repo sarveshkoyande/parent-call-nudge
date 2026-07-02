@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Index maps directly to frequencyWeeks: 0=daily, 1=weekly, 2=every 2 weeks... -->
+    <string-array name="freq_options">
+        <item>Every day</item>
+        <item>Weekly (Sun)</item>
+        <item>Every 2 weeks (Sun)</item>
+        <item>Every 3 weeks (Sun)</item>
+        <item>Every 4 weeks (Sun)</item>
+    </string-array>
+</resources>
